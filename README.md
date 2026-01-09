@@ -27,6 +27,7 @@ Designed to be:
 
 ## 📒 TODO
 
+- (HIGH PRIORITY) Replace ssid checks with sophos page exist checks. Makes it dynamic and removes the subprocess requirement.
 - Improve menu options such as the show status to instead say log status
 - Add much more detailed logging, especially for log status for production debugging and bug recreation.
 - Version releasing to remove the need to have python installed to build.
