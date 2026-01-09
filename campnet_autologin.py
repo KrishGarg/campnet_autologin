@@ -22,8 +22,8 @@ logger.setLevel(logging.INFO)
 
 handler = RotatingFileHandler(
     LOG_FILE,
-    maxBytes=1_000_000,   # 1 MB
-    backupCount=3         # keep last 3 files
+    maxBytes=1_000_000 / 2,   # 0.5 MB
+    backupCount=1         # keep last 1 file
 )
 
 formatter = logging.Formatter(
