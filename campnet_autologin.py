@@ -284,18 +284,14 @@ def worker_loop():
     logger.info("Worker loop started")
 
     while not stop_event.is_set():
-
-        # 1️⃣ Respect manual pause
         if not auto_login_enabled:
             last_status = "Auto-login paused"
             update_tooltip()
             stop_event.wait(CHECK_INTERVAL)
             continue
 
-        # 2️⃣ Check SSID
         ssid = get_cached_ssid()
 
-        # 🔹 Detect SSID change
         if ssid != last_seen_ssid:
             logger.info(f"Wi-Fi SSID changed: {last_seen_ssid} -> {ssid}")
             last_seen_ssid = ssid
