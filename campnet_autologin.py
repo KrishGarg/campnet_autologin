@@ -101,15 +101,18 @@ COOKIES = {
     "SF-UI-LANG": "en-US"
 }
 
+SSID_CHECK_INTERVAL = 60  # seconds
+
 last_seen_ssid = None
 last_status = "Starting..."
 auto_login_enabled = True
 icon_ref = None
-
-# ==========================================
+last_ssid_check_time = 0
+cached_ssid = None
 
 stop_event = threading.Event()
 
+# ---------- Helpers ----------
 def update_tooltip():
     if icon_ref:
         try:
@@ -118,11 +121,10 @@ def update_tooltip():
             pass
 
 
-# ---------- Helpers ----------
-
 def get_current_ssid():
     """
-    Returns SSID string if connected to Wi-Fi, else None
+    Returns SSID string if connected to Wi-Fi, else None.
+    Suppresses console window in PyInstaller exe.
     """
     try:
         output = subprocess.check_output(
@@ -130,11 +132,11 @@ def get_current_ssid():
             stderr=subprocess.DEVNULL,
             text=True,
             encoding="utf-8",
+            creationflags=subprocess.CREATE_NO_WINDOW
         )
 
         for line in output.splitlines():
             line = line.strip()
-            # Avoid "BSSID"
             if line.startswith("SSID") and "BSSID" not in line:
                 return line.split(":", 1)[1].strip()
 
@@ -143,6 +145,15 @@ def get_current_ssid():
 
     return None
 
+def get_cached_ssid():
+    global last_ssid_check_time, cached_ssid
+
+    now = time.time()
+    if now - last_ssid_check_time >= SSID_CHECK_INTERVAL:
+        cached_ssid = get_current_ssid()
+        last_ssid_check_time = now
+
+    return cached_ssid
 
 def now_ms():
     return int(time.time() * 1000)
@@ -282,7 +293,7 @@ def worker_loop():
             continue
 
         # 2️⃣ Check SSID
-        ssid = get_current_ssid()
+        ssid = get_cached_ssid()
 
         # 🔹 Detect SSID change
         if ssid != last_seen_ssid:
