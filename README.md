@@ -154,6 +154,7 @@ This removes the friction without being invasive, spammy, or unsafe.
 
 ## 📒 TODO
 
+- Add some alternative to config.json, such as a window to enter the details and it auto makes the file
 - Add the start at startup option through config or menu item?
 - Add much more detailed logging, especially for log status for production debugging and bug recreation.
 - Version releasing to remove the need to have python installed to build.
