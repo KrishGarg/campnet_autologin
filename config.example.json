@@ -1,5 +1,5 @@
 {
   "username": "",
   "password": "",
-  "allowed_ssids": ["BPGC-A_HOSTEL"]
+  "check_interval": 10
 }

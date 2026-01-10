@@ -8,7 +8,6 @@ from logging.handlers import RotatingFileHandler
 from pystray import Icon, Menu, MenuItem
 from PIL import Image, ImageDraw
 import urllib3
-import subprocess
 import json
 import os
 
@@ -36,10 +35,6 @@ logger.addHandler(handler)
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 def load_config():
-    """
-    Loads config.json from the same directory as the script/exe.
-    Exits the program with a clear error if invalid.
-    """
     if getattr(sys, 'frozen', False):
         # Running as .exe
         base_dir = os.path.dirname(sys.executable)
@@ -59,15 +54,11 @@ def load_config():
 
         username = cfg["username"]
         password = cfg["password"]
-        allowed_ssids = set(cfg["allowed_ssids"])
-
-        if not username or not password or not allowed_ssids:
-            raise ValueError("Empty values in config")
+        check_interval = cfg["check_interval"]
 
         logger.info("Config loaded successfully")
-        logger.info(f"Allowed SSIDs: {', '.join(allowed_ssids)}")
 
-        return username, password, allowed_ssids
+        return username, password
 
     except Exception as e:
         logger.exception("Invalid config.json")
@@ -79,9 +70,7 @@ def load_config():
 BASE = "https://campnet.bits-goa.ac.in:8090"
 CHECK_URL = "https://connectivitycheck.gstatic.com/generate_204"
 
-USERNAME, PASSWORD, ALLOWED_SSIDS = load_config()
-
-CHECK_INTERVAL = 10  # seconds
+USERNAME, PASSWORD, CHECK_INTERVAL = load_config()
 
 HEADERS = {
     "Accept": "*/*",
@@ -101,14 +90,9 @@ COOKIES = {
     "SF-UI-LANG": "en-US"
 }
 
-SSID_CHECK_INTERVAL = 60  # seconds
-
-last_seen_ssid = None
 last_status = "Starting..."
 auto_login_enabled = True
 icon_ref = None
-last_ssid_check_time = 0
-cached_ssid = None
 
 stop_event = threading.Event()
 
@@ -120,43 +104,23 @@ def update_tooltip():
         except:
             pass
 
-
-def get_current_ssid():
-    """
-    Returns SSID string if connected to Wi-Fi, else None.
-    Suppresses console window in PyInstaller exe.
-    """
-    try:
-        output = subprocess.check_output(
-            ["netsh", "wlan", "show", "interfaces"],
-            stderr=subprocess.DEVNULL,
-            text=True,
-            encoding="utf-8",
-            creationflags=subprocess.CREATE_NO_WINDOW
-        )
-
-        for line in output.splitlines():
-            line = line.strip()
-            if line.startswith("SSID") and "BSSID" not in line:
-                return line.split(":", 1)[1].strip()
-
-    except Exception:
-        pass
-
-    return None
-
-def get_cached_ssid():
-    global last_ssid_check_time, cached_ssid
-
-    now = time.time()
-    if now - last_ssid_check_time >= SSID_CHECK_INTERVAL:
-        cached_ssid = get_current_ssid()
-        last_ssid_check_time = now
-
-    return cached_ssid
-
 def now_ms():
     return int(time.time() * 1000)
+
+def is_portal_available():
+    """
+    Returns True if the captive portal is reachable on this network.
+    This identifies whether we are on a compatible Wi-Fi.
+    """
+    try:
+        r = requests.get(
+            f"{BASE}/httpclient.html",
+            timeout=5,
+            verify=False
+        )
+        return r.status_code == 200
+    except Exception:
+        return False
 
 
 def is_logged_in():
@@ -279,39 +243,37 @@ def force_logout():
 
 
 def worker_loop():
-    global last_status, last_seen_ssid
+    global last_status
 
     logger.info("Worker loop started")
 
     while not stop_event.is_set():
+
+        # Respect manual pause
         if not auto_login_enabled:
             last_status = "Auto-login paused"
             update_tooltip()
             stop_event.wait(CHECK_INTERVAL)
             continue
 
-        ssid = get_cached_ssid()
+        # Check if this network supports the captive portal
+        if not is_portal_available():
+            last_status = "Not on campus network"
+            update_tooltip()
+            stop_event.wait(CHECK_INTERVAL)
+            continue
 
-        if ssid != last_seen_ssid:
-            logger.info(f"Wi-Fi SSID changed: {last_seen_ssid} -> {ssid}")
-            last_seen_ssid = ssid
-
-        if ssid is None:
-            last_status = "No Wi-Fi connection"
-
-        elif ssid not in ALLOWED_SSIDS:
-            last_status = f"Wi-Fi '{ssid}' not allowed – auto-login paused"
-
+        # We are on a compatible network
+        if not is_logged_in():
+            last_status = "Campus network detected – logging in"
+            logger.info("Campus network detected -> attempting login")
+            captive_login()
         else:
-            if not is_logged_in():
-                last_status = f"{ssid}: Not logged in – retrying"
-                logger.info(f"{ssid}: Not logged in -> attempting login")
-                captive_login()
-            else:
-                last_status = f"{ssid}: Connected"
+            last_status = "Connected (campus network)"
 
         update_tooltip()
         stop_event.wait(CHECK_INTERVAL)
+
 
 
 # ================= TRAY UI =================
