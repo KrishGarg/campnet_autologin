@@ -152,6 +152,17 @@ This removes the friction without being invasive, spammy, or unsafe.
 
 # 💖 Development / Contributing
 
+## 📒 TODO
+
+- Add the start at startup option through config or menu item?
+- Add much more detailed logging, especially for log status for production debugging and bug recreation.
+- Version releasing to remove the need to have python installed to build.
+- More constants shifted to config file for more control to the user.
+- Better icon (maybe dynamic with status)
+- Better guide to setup, with possible less steps and more images.
+
+---
+
 ## 📁 Project Files
 
 Files kept in the repository:
