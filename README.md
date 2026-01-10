@@ -23,119 +23,7 @@ Designed to be:
 
 ---
 
-## 📒 TODO
-
-- Add the start at startup option through config or menu item?
-- Add much more detailed logging, especially for log status for production debugging and bug recreation.
-- Version releasing to remove the need to have python installed to build.
-- More constants shifted to config file for more control to the user.
-- Better icon (maybe dynamic with status)
-- Better guide to setup, with possible less steps and more images.
-
----
-
-## 📁 Project Files
-
-Files kept in the repository:
-
-```
-campnet_autologin.py
-config.example.json
-requirements.txt
-README.md
-.gitignore
-```
-
-Generated locally (not committed):
-
-```
-CampNetAutoLogin.exe
-config.json
-campnet_autologin.log
-```
-
----
-
-## 🧩 Requirements (Python run)
-
-- Windows 10 / 11
-- Python 3.10+ (official Python installer)
-- Campus Wi‑Fi with captive portal
-
-Install dependencies:
-
-```bash
-py -m pip install -r requirements.txt
-```
-
----
-
-## ⚙️ Configuration
-
-### 1. Create `config.json`
-
-Copy the example file:
-
-```bash
-copy config.example.json config.json
-```
-
-Edit `config.json` with your credentials and allowed SSIDs, for example:
-
-```json
-{
-  "username": "YOUR_USERNAME",
-  "password": "YOUR_PASSWORD",
-  "check_interval": 10
-}
-```
-
----
-
-## ▶️ Run using Python (development mode)
-
-```bash
-python campnet_autologin.py
-```
-
-Expected behavior:
-
-- Tray icon appears
-- Tooltip shows current status
-- Logs written to `campnet_autologin.log`
-
-Exit using:
-
-- Tray → Exit
-- `Ctrl + C` in terminal
-
----
-
-## 📦 Build Windows `.exe` (recommended)
-
-Creates a single background executable (no Python needed at runtime).
-
-### 1. Install PyInstaller
-
-```bash
-py -m pip install pyinstaller
-```
-
-### 2. Build the executable
-
-```bash
-py -m PyInstaller --onefile --noconsole --name CampNetAutoLogin campnet_autologin.py
-```
-
-Output:
-
-```
-dist/CampNetAutoLogin.exe
-```
-
----
-
-## 📂 Final install layout (IMPORTANT)
+## 🖥️ Setup
 
 Create a permanent folder, for example:
 
@@ -150,8 +38,10 @@ CampNetAutoLogin.exe
 config.json
 ```
 
-- `config.json` **must be next to the exe**
+- `config.json` **must be next to the exe**. You can take the `config.example.json` and edit accordingly.
 - Log files are created here automatically
+
+Now just running the executable should enable the auto connect.
 
 ---
 
@@ -237,7 +127,6 @@ Safe for long-running sessions.
 
 **No auto login**
 
-- Verify SSID spelling
 - Verify credentials
 - Check log file
 
@@ -258,3 +147,108 @@ Do not use to bypass network policies.
 
 Campus captive portals are annoying.
 This removes the friction without being invasive, spammy, or unsafe.
+
+---
+
+# 💖 Development / Contributing
+
+## 📁 Project Files
+
+Files kept in the repository:
+
+```
+campnet_autologin.py
+config.example.json
+requirements.txt
+README.md
+.gitignore
+```
+
+Generated locally (not committed):
+
+```
+CampNetAutoLogin.exe
+config.json
+campnet_autologin.log
+```
+
+---
+
+## 🧩 Requirements (Python run)
+
+- Windows 10 / 11
+- Python 3.10+ (official Python installer)
+- Campus Wi‑Fi with captive portal
+
+Install dependencies:
+
+```bash
+py -m pip install -r requirements.txt
+```
+
+---
+
+## ⚙️ Configuration
+
+### 1. Create `config.json`
+
+Copy the example file:
+
+```bash
+copy config.example.json config.json
+```
+
+Edit `config.json` with your credentials and allowed SSIDs, for example:
+
+```json
+{
+  "username": "YOUR_USERNAME",
+  "password": "YOUR_PASSWORD",
+  "check_interval": 10
+}
+```
+
+---
+
+## ▶️ Run using Python (development mode)
+
+```bash
+python campnet_autologin.py
+```
+
+Expected behavior:
+
+- Tray icon appears
+- Tooltip shows current status
+- Logs written to `campnet_autologin.log`
+
+Exit using:
+
+- Tray → Exit
+- `Ctrl + C` in terminal
+
+---
+
+## 📦 Build Windows `.exe`
+
+Creates a single background executable (no Python needed at runtime).
+
+### 1. Install PyInstaller
+
+```bash
+py -m pip install pyinstaller
+```
+
+### 2. Build the executable
+
+```bash
+py -m PyInstaller --onefile --noconsole --name CampNetAutoLogin campnet_autologin.py
+```
+
+Output:
+
+```
+dist/CampNetAutoLogin.exe
+```
+
+---
