@@ -14,10 +14,8 @@ Designed to be:
 ## ✨ Features
 
 - Auto login to captive portal Wi-Fi
-- Only runs on allowed Wi-Fi SSIDs
 - Manual **Force Logout** (pauses auto login)
 - Manual **Force Login** (resumes auto login)
-- SSID caching (checks Wi‑Fi name only once per minute)
 - Tray icon with live status tooltip
 - Rotating log files (no clutter)
 - No flashing console windows (even in `.exe`)
@@ -27,9 +25,7 @@ Designed to be:
 
 ## 📒 TODO
 
-- (HIGH PRIORITY) Replace ssid checks with sophos page exist checks. Makes it dynamic and removes the subprocess requirement.
-- (BUG) Force login doesn't update ssid.
-- Improve menu options such as the show status to instead say log status
+- Add the start at startup option through config or menu item?
 - Add much more detailed logging, especially for log status for production debugging and bug recreation.
 - Version releasing to remove the need to have python installed to build.
 - More constants shifted to config file for more control to the user.
@@ -90,14 +86,9 @@ Edit `config.json` with your credentials and allowed SSIDs, for example:
 {
   "username": "YOUR_USERNAME",
   "password": "YOUR_PASSWORD",
-  "allowed_ssids": ["BPGC-A_HOSTEL"]
+  "check_interval": 10
 }
 ```
-
-### Notes
-
-- SSIDs are **case-sensitive**
-- Auto login runs **only** on the listed networks
 
 ---
 
@@ -234,8 +225,6 @@ Safe for long-running sessions.
 - No GPS usage
 - No Windows Location Service APIs
 - No Wi‑Fi scanning
-- Only reads current SSID
-- Network requests only on allowed SSIDs
 
 ---
 

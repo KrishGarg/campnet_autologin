@@ -269,7 +269,7 @@ def worker_loop():
             logger.info("Campus network detected -> attempting login")
             captive_login()
         else:
-            last_status = "Connected (campus network)"
+            last_status = "Connected"
 
         update_tooltip()
         stop_event.wait(CHECK_INTERVAL)
@@ -337,7 +337,7 @@ def main():
     menu = Menu(
         MenuItem("Force Login", force_login_action),
         MenuItem("Force Logout (Pause Auto Login)", force_logout_action),
-        MenuItem("Show Status (console)", show_status),
+        MenuItem("Log Status (debug)", show_status),
         MenuItem("Exit", exit_app),
     )
 
