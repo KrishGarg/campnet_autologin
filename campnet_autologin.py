@@ -58,7 +58,7 @@ def load_config():
 
         logger.info("Config loaded successfully")
 
-        return username, password
+        return username, password, check_interval
 
     except Exception as e:
         logger.exception("Invalid config.json")
