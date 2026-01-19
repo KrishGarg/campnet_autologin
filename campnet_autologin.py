@@ -11,8 +11,13 @@ import urllib3
 import json
 import os
 
+import tkinter as tk
+from tkinter import messagebox
+
+
 
 # ================= LOGGING =================
+tk_root = None
 
 LOG_FILE = "campnet_autologin.log"
 
@@ -34,43 +39,11 @@ logger.addHandler(handler)
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-def load_config():
-    if getattr(sys, 'frozen', False):
-        # Running as .exe
-        base_dir = os.path.dirname(sys.executable)
-    else:
-        # Running as .py
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-
-    config_path = os.path.join(base_dir, "config.json")
-
-    if not os.path.exists(config_path):
-        logger.error(f"config.json not found at {config_path}")
-        sys.exit("config.json missing")
-
-    try:
-        with open(config_path, "r", encoding="utf-8") as f:
-            cfg = json.load(f)
-
-        username = cfg["username"]
-        password = cfg["password"]
-        check_interval = cfg["check_interval"]
-
-        logger.info("Config loaded successfully")
-
-        return username, password, check_interval
-
-    except Exception as e:
-        logger.exception("Invalid config.json")
-        sys.exit(f"Invalid config.json: {e}")
-
 
 # ==========================================
 
 BASE = "https://campnet.bits-goa.ac.in:8090"
 CHECK_URL = "https://connectivitycheck.gstatic.com/generate_204"
-
-USERNAME, PASSWORD, CHECK_INTERVAL = load_config()
 
 HEADERS = {
     "Accept": "*/*",
@@ -165,8 +138,183 @@ def login(session):
         timeout=5,
     )
 
+def prompt_for_config(config_path):
+    """
+    Opens a simple dialog to collect username and password,
+    then writes config.json with default check_interval = 10.
+    """
+    root = tk.Tk()
+    root.title("CampNet Auto Login – Setup")
+    root.resizable(False, False)
+    root.attributes("-topmost", True)
+
+    tk.Label(root, text="Username").grid(row=0, column=0, padx=10, pady=5, sticky="e")
+    username_entry = tk.Entry(root, width=30)
+    username_entry.grid(row=0, column=1, padx=10, pady=5)
+
+    tk.Label(root, text="Password").grid(row=1, column=0, padx=10, pady=5, sticky="e")
+    password_entry = tk.Entry(root, width=30, show="*")
+    password_entry.grid(row=1, column=1, padx=10, pady=5)
+
+    result = {}
+
+    def submit():
+        username = username_entry.get().strip()
+        password = password_entry.get().strip()
+
+        if not username or not password:
+            messagebox.showerror("Error", "Both fields are required")
+            return
+
+        result["username"] = username
+        result["password"] = password
+        root.destroy()
+
+    def cancel():
+        root.destroy()
+
+    btn_frame = tk.Frame(root)
+    btn_frame.grid(row=2, column=0, columnspan=2, pady=10)
+
+    tk.Button(btn_frame, text="Save", width=10, command=submit).pack(side="left", padx=5)
+    tk.Button(btn_frame, text="Cancel", width=10, command=cancel).pack(side="right", padx=5)
+
+    username_entry.focus()
+    root.mainloop()
+
+    if not result:
+        sys.exit("Setup cancelled by user")
+
+    config = {
+        "username": result["username"],
+        "password": result["password"],
+        "check_interval": 10
+    }
+
+    with open(config_path, "w", encoding="utf-8") as f:
+        json.dump(config, f, indent=2)
+
+    logger.info("config.json created via setup dialog")
+
+    return config
+
+
 
 # ---------- Core Logic ----------
+
+def load_config():
+    if getattr(sys, 'frozen', False):
+        base_dir = os.path.dirname(sys.executable)
+    else:
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+
+    config_path = os.path.join(base_dir, "config.json")
+
+    # If config does not exist, prompt user
+    if not os.path.exists(config_path):
+        logger.info("config.json not found, launching setup dialog")
+        cfg = prompt_for_config(config_path)
+        return cfg["username"], cfg["password"], cfg["check_interval"]
+
+    # Load existing config
+    try:
+        with open(config_path, "r", encoding="utf-8") as f:
+            cfg = json.load(f)
+
+        username = cfg["username"]
+        password = cfg["password"]
+        check_interval = cfg.get("check_interval", 10)
+
+        if not username or not password:
+            raise ValueError("Invalid credentials in config")
+
+        logger.info("Config loaded successfully")
+        return username, password, check_interval
+
+    except Exception as e:
+        logger.exception("Invalid config.json")
+        sys.exit(f"Invalid config.json: {e}")
+
+USERNAME, PASSWORD, CHECK_INTERVAL = load_config()
+
+def open_settings_window():
+    global USERNAME, PASSWORD, CHECK_INTERVAL
+
+    # Load latest config
+    if getattr(sys, 'frozen', False):
+        base_dir = os.path.dirname(sys.executable)
+    else:
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+
+    config_path = os.path.join(base_dir, "config.json")
+
+    with open(config_path, "r", encoding="utf-8") as f:
+        cfg = json.load(f)
+
+    root = tk.Toplevel(tk_root)
+    root.title("CampNet Auto Login – Settings")
+    root.resizable(False, False)
+    root.attributes("-topmost", True)
+
+    tk.Label(root, text="Username").grid(row=0, column=0, padx=10, pady=5, sticky="e")
+    username_entry = tk.Entry(root, width=30)
+    username_entry.insert(0, cfg.get("username", ""))
+    username_entry.grid(row=0, column=1, padx=10, pady=5)
+
+    tk.Label(root, text="Password").grid(row=1, column=0, padx=10, pady=5, sticky="e")
+    password_entry = tk.Entry(root, width=30, show="*")
+    password_entry.insert(0, cfg.get("password", ""))
+    password_entry.grid(row=1, column=1, padx=10, pady=5)
+
+    tk.Label(root, text="Check interval (seconds)").grid(row=2, column=0, padx=10, pady=5, sticky="e")
+    interval_entry = tk.Entry(root, width=10)
+    interval_entry.insert(0, str(cfg.get("check_interval", 10)))
+    interval_entry.grid(row=2, column=1, padx=10, pady=5, sticky="w")
+
+    startup_var = tk.BooleanVar(value=cfg.get("startup_enabled", False))
+    tk.Checkbutton(
+        root,
+        text="Start automatically on system startup (coming soon)",
+        variable=startup_var
+    ).grid(row=3, column=0, columnspan=2, pady=5)
+
+    def save():
+        nonlocal cfg
+        global USERNAME, PASSWORD, CHECK_INTERVAL
+        try:
+            new_username = username_entry.get().strip()
+            new_password = password_entry.get().strip()
+            new_interval = int(interval_entry.get())
+
+            if not new_username or not new_password:
+                raise ValueError("Username and password cannot be empty")
+
+            cfg["username"] = new_username
+            cfg["password"] = new_password
+            cfg["check_interval"] = new_interval
+            cfg["startup_enabled"] = startup_var.get()
+
+            with open(config_path, "w", encoding="utf-8") as f:
+                json.dump(cfg, f, indent=2)
+
+            # Apply immediately
+            USERNAME = new_username
+            PASSWORD = new_password
+            CHECK_INTERVAL = new_interval
+
+            root.destroy()
+
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
+
+    btns = tk.Frame(root)
+    btns.grid(row=4, column=0, columnspan=2, pady=10)
+
+    tk.Button(btns, text="Save", width=10, command=save).pack(side="left", padx=5)
+    tk.Button(btns, text="Cancel", width=10, command=root.destroy).pack(side="right", padx=5)
+
+    root.mainloop()
+
 
 def captive_login():
     global last_status
@@ -182,8 +330,6 @@ def captive_login():
             s.cookies.update(COOKIES)
             login(s)
 
-        time.sleep(1)
-
         if is_logged_in():
             last_status = "Logged in successfully"
             logger.info("Login successful")
@@ -195,10 +341,8 @@ def captive_login():
             s.headers.update(HEADERS)
             s.cookies.update(COOKIES)
             logout(s)
-            time.sleep(0.5)
             login(s)
 
-        time.sleep(1)
 
         if is_logged_in():
             last_status = "Logged in after reset"
@@ -296,16 +440,34 @@ def force_logout_action(icon, item):
 def show_status(icon, item):
     logger.info(f"Status requested: {last_status}, auto_login={auto_login_enabled}")
 
+def open_settings_action(icon, item):
+    # Schedule UI creation on Tk main thread
+    tk_root.after(0, open_settings_window)
+
 
 def shutdown(reason=""):
     logger.info(f"Shutting down ({reason})")
+
+    # Stop worker loop
     stop_event.set()
+
+    # Stop tray icon
     if icon_ref:
         try:
             icon_ref.stop()
         except:
             pass
+
+    # Stop Tk mainloop
+    if tk_root:
+        try:
+            tk_root.after(0, tk_root.quit)
+        except:
+            pass
+
+    # Final hard exit
     sys.exit(0)
+
 
 
 def exit_app(icon, item):
@@ -325,30 +487,44 @@ signal.signal(signal.SIGTERM, signal_handler)
 # ---------- Main ----------
 
 def main():
-    global icon_ref
+    global icon_ref, tk_root
 
     logger.info("CampNet Auto Login starting")
 
+    # --- Start hidden Tk root on MAIN thread ---
+    tk_root = tk.Tk()
+    tk_root.withdraw()   # hide main window
+
+    # --- Start worker thread ---
     t = threading.Thread(target=worker_loop, daemon=True)
     t.start()
-    update_tooltip()
 
+    # --- Tray icon runs in background thread ---
+    def tray_thread():
+        global icon_ref
 
-    menu = Menu(
-        MenuItem("Force Login", force_login_action),
-        MenuItem("Force Logout (Pause Auto Login)", force_logout_action),
-        MenuItem("Log Status (debug)", show_status),
-        MenuItem("Exit", exit_app),
-    )
+        menu = Menu(
+            MenuItem("Settings", open_settings_action),
+            MenuItem("Force Login", force_login_action),
+            MenuItem("Force Logout (Pause Auto Login)", force_logout_action),
+            MenuItem("Log Status (debug)", show_status),
+            MenuItem("Exit", exit_app),
+        )
 
-    icon_ref = Icon(
-        "CampNet Auto Login",
-        create_image(),
-        "CampNet Auto Login\nStarting...",
-        menu
-    )
+        icon_ref = Icon(
+            "CampNet Auto Login",
+            create_image(),
+            "CampNet Auto Login\nStarting...",
+            menu
+        )
 
-    icon_ref.run()
+        icon_ref.run()
+
+    threading.Thread(target=tray_thread, daemon=True).start()
+
+    # --- Tk event loop (blocks main thread correctly) ---
+    tk_root.mainloop()
+
 
 
 if __name__ == "__main__":
